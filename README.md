@@ -39,9 +39,13 @@ To install and run this Tula implementation, follow these steps:
    git clone https://git@github.com:OleksiiBulba/tula.git <repo-dir>
    cd <repo-dir>
 ```
-Build the project:
+2. Build the project:
 ```bash
 make
+```
+3. Clean the project:
+```bash
+make clean
 ```
 
 ## Usage

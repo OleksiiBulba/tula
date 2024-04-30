@@ -5,7 +5,7 @@
 
 #include "tula_state_machine.h"
 #include "../libs/array/array.h"
-// #include "libs/linked_list/linked_list.h"
+#include "../libs/linked_list/linked_list.h"
 #include "../libs/logger/logger.h"
 #include "rule.h"
 
@@ -17,7 +17,6 @@
 extern Logger *logger;
 MachineState *global_machine;
 
-/* TODO: hash table optimization
 LINKED_LIST_DEFINITIONS(Rule);
 
 DEFINE_MATCH_TYPE(
@@ -25,7 +24,6 @@ DEFINE_MATCH_TYPE(
     CONTEXT_CRITERIA_TYPE(Rule)* c = (CONTEXT_CRITERIA_TYPE(Rule)*) context,
     (strcmp(element->state, c->state) == 0 && element->read == c->read)
 )
-*/
 
 // Kinda private methods
 static ARRAY(Rule)* _create_rules_array(int initial_capacity);
@@ -283,7 +281,6 @@ static void _print_state()
     printf("^\n");
 }
 
-/* TODO: hash table optimization
 unsigned int hash_rule(const char* state, char read)
 {
     unsigned long hash = 5381;
@@ -312,5 +309,4 @@ void add_rule_to_hash_table(RuleHashTable *table, Rule *rule)
         unsigned int index = hash_rule(rule->state, rule->read);
     }
 }
-*/
 
