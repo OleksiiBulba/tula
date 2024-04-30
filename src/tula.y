@@ -10,14 +10,16 @@
 #define LOGGER_IMPLEMENTATION
 #include "../libs/logger/logger.h"
 
-#if defined(DEBUG) && defined(RELEASE)
-#error "DEBUG and RELEASE cannot be defined together"
+#if defined(DEBUG) + defined(RELEASE) + defined(TEST) > 1
+#error "Only one of DEBUG, RELEASE, or TEST may be defined."
 #endif
 
 #if defined(DEBUG)
 #define LOG_LEVEL LOG_DEBUG
 #elif defined(RELEASE)
 #define LOG_LEVEL LOG_ERROR
+#elif defined(TEST)
+#define LOG_LEVEL LOG_NONE
 #else
 #define LOG_LEVEL LOG_INFO
 #endif
