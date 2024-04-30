@@ -1,0 +1,6 @@
+bin/*
+!bin/.gitkeep
+
+src/*.lex.*
+src/*.tab.*
+
