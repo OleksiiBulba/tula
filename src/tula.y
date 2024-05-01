@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
     yyparse();
     fclose(yyin);
 
-    machine->run();
-    machine->free();
+    machine->run(machine);
+    machine->free(machine);
     logger->free();
 
     return 0;
@@ -96,7 +96,7 @@ program:
     ;
 
 tape:
-    TAPE tape_content { machine->set_tape_data($2); }
+    TAPE tape_content { machine->set_tape_data(machine, $2); }
     ;
 
 tape_content:
@@ -115,14 +115,14 @@ rules:
     | rules rule NEWLINE { /* Nothing here */ }
 
 rule:
-    CASE IDENTIFIER NUMBER NUMBER R_ARROW IDENTIFIER    { machine->add_rule($2, '0' + $3, '0' + $4,  1, $6); }
-    | CASE IDENTIFIER NUMBER NUMBER L_ARROW IDENTIFIER  { machine->add_rule($2, '0' + $3, '0' + $4, -1, $6); }
-    | CASE IDENTIFIER '_' NUMBER R_ARROW IDENTIFIER     { machine->add_rule($2, '_',      '0' + $4,  1, $6); }
-    | CASE IDENTIFIER NUMBER '_' R_ARROW IDENTIFIER     { machine->add_rule($2, '0' + $3, '_',       1, $6); }
-    | CASE IDENTIFIER '_' '_' R_ARROW IDENTIFIER        { machine->add_rule($2, '_',      '_',       1, $6); }
-    | CASE IDENTIFIER '_' NUMBER L_ARROW IDENTIFIER     { machine->add_rule($2, '_',      '0' + $4, -1, $6); }
-    | CASE IDENTIFIER NUMBER '_' L_ARROW IDENTIFIER     { machine->add_rule($2, '0' + $3, '_',      -1, $6); }
-    | CASE IDENTIFIER '_' '_' L_ARROW IDENTIFIER        { machine->add_rule($2, '_',      '_',      -1, $6); }
+    CASE IDENTIFIER NUMBER NUMBER R_ARROW IDENTIFIER    { machine->add_rule(machine, $2, '0' + $3, '0' + $4,  1, $6); }
+    | CASE IDENTIFIER NUMBER NUMBER L_ARROW IDENTIFIER  { machine->add_rule(machine, $2, '0' + $3, '0' + $4, -1, $6); }
+    | CASE IDENTIFIER '_' NUMBER R_ARROW IDENTIFIER     { machine->add_rule(machine, $2, '_',      '0' + $4,  1, $6); }
+    | CASE IDENTIFIER NUMBER '_' R_ARROW IDENTIFIER     { machine->add_rule(machine, $2, '0' + $3, '_',       1, $6); }
+    | CASE IDENTIFIER '_' '_' R_ARROW IDENTIFIER        { machine->add_rule(machine, $2, '_',      '_',       1, $6); }
+    | CASE IDENTIFIER '_' NUMBER L_ARROW IDENTIFIER     { machine->add_rule(machine, $2, '_',      '0' + $4, -1, $6); }
+    | CASE IDENTIFIER NUMBER '_' L_ARROW IDENTIFIER     { machine->add_rule(machine, $2, '0' + $3, '_',      -1, $6); }
+    | CASE IDENTIFIER '_' '_' L_ARROW IDENTIFIER        { machine->add_rule(machine, $2, '_',      '_',      -1, $6); }
     ;
 
 %%

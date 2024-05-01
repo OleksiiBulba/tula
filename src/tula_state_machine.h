@@ -14,7 +14,7 @@
 
 ARRAY_DEFINE(Rule);
 
-typedef struct {
+typedef struct MachineState {
     char* current_state;
     char* next_state;
 #ifdef INCLUDE_PREVIOUS_STATE
@@ -26,12 +26,10 @@ typedef struct {
     int head;
     ARRAY(Rule) *rules;
 
-    void (*run)();
-    void (*add_rule)(char* state, char read, char write, int move, char* next_state);
-    void (*read_tape)(FILE *file);
-    void (*add_tape_data)(char data);
-    void (*set_tape_data)(char* data);
-    void (*free)();
+    void (*run)(struct MachineState *machine);
+    void (*add_rule)(struct MachineState *machine, char* state, char read, char write, int move, char* next_state);
+    void (*set_tape_data)(struct MachineState *machine, char* data);
+    void (*free)(struct MachineState *machine);
 } MachineState;
 
 extern MachineState *global_machine;
