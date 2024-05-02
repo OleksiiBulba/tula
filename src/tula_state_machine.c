@@ -39,80 +39,76 @@
 #define HEAD_START_POSITION 0
 
 extern Logger *logger;
-MachineState *global_machine;
 
 // Kinda private methods
 static ARRAY(Rule)* _create_rules_array(int initial_capacity);
-static bool _has_machine_halted(void);
-static void _free_machine(void);
-static void _print_state(void);
-static void _apply_rule(const Rule*);
-static void _write_tape(char);
-static void _move_head(int);
-static void _ensure_tape_size(int);
-static void _machine_run(void);
+static bool _has_machine_halted(MachineState *machine);
+static void _free_machine(MachineState *machine);
+static void _print_state(MachineState *machine);
+static void _apply_rule(MachineState *machine, const Rule*);
+static void _write_tape(MachineState *machine, char);
+static void _move_head(MachineState *machine, int);
+static void _ensure_tape_size(MachineState *machine, int);
+static void _machine_run(MachineState *machine);
 static void _add_rule(
+    MachineState *machine, 
     char* state,
     char read,
     char write,
     int move,
     char* next_state
 );
-static void _set_tape_data(char*);
-static bool _check_duplicate_rule(char* state, char read);
+static void _set_tape_data(MachineState *machine, char*);
+static bool _check_duplicate_rule(MachineState *machine, char* state, char read);
 
 MachineState* create_machine()
 {
-    if (global_machine == NULL) {
-        MachineState* machine = malloc(sizeof(MachineState));
-        if (!machine) {
-            logger->fatal("Failed to allocate memory for the machine.");
-            exit(EXIT_FAILURE);
-        }
-        
-        machine->tape_capacity = INITIAL_TAPE_SIZE;
-        machine->tape_length = INITIAL_TAPE_LENGTH;
-        machine->tape = malloc(machine->tape_capacity * sizeof(char));
-        if (!machine->tape) {
-            free(machine);
-            logger->fatal("Failed to allocate memory for the tape.");
-            exit(EXIT_FAILURE);
-        }
-
-        machine->rules = _create_rules_array(INIAL_RULES_CAPACITY);
-        if (!machine->rules) {
-            free(machine->tape);
-            free(machine);
-            logger->fatal("Failed to allocate memory for rules array.");
-            exit(EXIT_FAILURE);
-        }
-
-        memset(machine->tape, INITIAL_TAPE_CHAR, INITIAL_TAPE_SIZE);
-
-        machine->current_state = "";
-#ifdef INCLUDE_PREVIOUS_STATE
-        machine->previous_state = "";
-#endif
-        machine->next_state = NULL;
-        machine->head = HEAD_START_POSITION;
-
-        machine->run = _machine_run;
-        machine->add_rule = _add_rule;
-        machine->free = _free_machine;
-        machine->set_tape_data = _set_tape_data;
-
-        global_machine = machine;
+    MachineState* machine = malloc(sizeof(MachineState));
+    if (!machine) {
+        logger->fatal("Failed to allocate memory for the machine.");
+        exit(EXIT_FAILURE);
     }
 
-    return global_machine;
+    machine->tape_capacity = INITIAL_TAPE_SIZE;
+    machine->tape_length = INITIAL_TAPE_LENGTH;
+    machine->tape = malloc(machine->tape_capacity * sizeof(char));
+    if (!machine->tape) {
+        free(machine);
+        logger->fatal("Failed to allocate memory for the tape.");
+        exit(EXIT_FAILURE);
+    }
+
+    machine->rules = _create_rules_array(INIAL_RULES_CAPACITY);
+    if (!machine->rules) {
+        free(machine->tape);
+        free(machine);
+        logger->fatal("Failed to allocate memory for rules array.");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(machine->tape, INITIAL_TAPE_CHAR, INITIAL_TAPE_SIZE);
+
+    machine->current_state = "";
+#ifdef INCLUDE_PREVIOUS_STATE
+    machine->previous_state = "";
+#endif
+    machine->next_state = NULL;
+    machine->head = HEAD_START_POSITION;
+
+    machine->run = _machine_run;
+    machine->add_rule = _add_rule;
+    machine->free = _free_machine;
+    machine->set_tape_data = _set_tape_data;
+
+    return machine;
 }
 
-static bool _check_duplicate_rule(char* state, char read)
+static bool _check_duplicate_rule(MachineState *machine, char* state, char read)
 {
-    for (int i = 0; i < global_machine->rules->count; i++) {
+    for (int i = 0; i < machine->rules->count; i++) {
         if (
-            strcmp(ARRAY_GET(global_machine->rules, i)->state, state) == 0
-            && ARRAY_GET(global_machine->rules, i)->read == read
+            strcmp(ARRAY_GET(machine->rules, i)->state, state) == 0
+            && ARRAY_GET(machine->rules, i)->read == read
         ) {
             return true;
         }
@@ -120,67 +116,68 @@ static bool _check_duplicate_rule(char* state, char read)
     return false;
 }
 
-static void _machine_run()
+static void _machine_run(MachineState *machine)
 {
-    if (global_machine->current_state == NULL || strlen(global_machine->current_state) == 0) {
+    if (machine->current_state == NULL || strlen(machine->current_state) == 0) {
         logger->fatal("No rules defined in the file.");
         exit(1);
     }
 
     while (1) {
-        if (_has_machine_halted()) {
-            _print_state();
+        if (_has_machine_halted(machine)) {
+            _print_state(machine);
             logger->info("The machine has halted.");
             break;
         }
         
         bool rule_found = false;
-        for (int i = 0; i < global_machine->rules->count; i++) {
+        for (int i = 0; i < machine->rules->count; i++) {
             if (
-                strcmp(ARRAY_GET(global_machine->rules, i)->state, global_machine->current_state) == 0
-                && (ARRAY_GET(global_machine->rules, i)->read == global_machine->tape[global_machine->head] || ARRAY_GET(global_machine->rules, i)->read == '_')
+                strcmp(ARRAY_GET(machine->rules, i)->state, machine->current_state) == 0
+                && (ARRAY_GET(machine->rules, i)->read == machine->tape[machine->head] || ARRAY_GET(machine->rules, i)->read == '_')
             ) {
                 logger->debug(
                     "Found next rule: state %s, read %d, write %d, move %d.",
-                    ARRAY_GET(global_machine->rules, i)->state,
-                    ARRAY_GET(global_machine->rules, i)->read,
-                    ARRAY_GET(global_machine->rules, i)->write,
-                    ARRAY_GET(global_machine->rules, i)->move
+                    ARRAY_GET(machine->rules, i)->state,
+                    ARRAY_GET(machine->rules, i)->read,
+                    ARRAY_GET(machine->rules, i)->write,
+                    ARRAY_GET(machine->rules, i)->move
                 );
 
-                _apply_rule(ARRAY_GET(global_machine->rules, i));
+                _apply_rule(machine, ARRAY_GET(machine->rules, i));
                 rule_found = true;
                 break;
             }
         }
 
         if (!rule_found) {
-            logger->fatal("No rule matches the current state '%s' and read value '%c'\n", global_machine->current_state, global_machine->tape[global_machine->head]);
+            logger->fatal("No rule matches the current state '%s' and read value '%c'\n", machine->current_state, machine->tape[machine->head]);
             exit(1);
         }
     }
 }
 
 static void _add_rule(
+    MachineState *machine, 
     char* state,
     char read,
     char write,
     int move,
     char* next_state
 ) {
-    if (_check_duplicate_rule(state, read)) {
+    if (_check_duplicate_rule(machine, state, read)) {
         logger->fatal("Ambiguous table rules for state '%s' and read value '%c'\n", state, read);
         exit(1);
     }
 
-    if (global_machine->current_state == NULL || global_machine->rules->count == 0) {
-        global_machine->current_state = strdup(state);
+    if (machine->current_state == NULL || machine->rules->count == 0) {
+        machine->current_state = strdup(state);
     }
     Rule *newRule = new_rule(state, read, write, move, next_state);
-    array_append(global_machine->rules, newRule);
+    array_append(machine->rules, newRule);
 }
 
-static void _set_tape_data(char* data)
+static void _set_tape_data(MachineState *machine, char* data)
 {
     if (logger != NULL) {
         logger->debug("Tape data to set: \"%s\"\n", data);
@@ -188,23 +185,23 @@ static void _set_tape_data(char* data)
     if (!data) return;
 
     int data_len = strlen(data);
-    _ensure_tape_size(data_len);
-    memcpy(global_machine->tape, data, data_len);
-    global_machine->tape_length = data_len;
-    if (data_len < global_machine->tape_capacity) {
-        global_machine->tape[data_len] = '\0';
+    _ensure_tape_size(machine, data_len);
+    memcpy(machine->tape, data, data_len);
+    machine->tape_length = data_len;
+    if (data_len < machine->tape_capacity) {
+        machine->tape[data_len] = '\0';
     }
 }
 
-static void _apply_rule(const Rule *rule)
+static void _apply_rule(MachineState *machine, const Rule *rule)
 {
-    _print_state();
-    _write_tape(rule->write);
-    _move_head(rule->move);
+    _print_state(machine);
+    _write_tape(machine, rule->write);
+    _move_head(machine, rule->move);
     #ifdef INCLUDE_PREVIOUS_STATE
     machine->previous_state = strdup(machine->current_state);
     #endif // INCLUDE_PREVIOUS_STATE
-    global_machine->current_state = strdup(rule->next_state);
+    machine->current_state = strdup(rule->next_state);
 }
 
 static ARRAY(Rule)* _create_rules_array(int initial_capacity)
@@ -228,70 +225,68 @@ static ARRAY(Rule)* _create_rules_array(int initial_capacity)
     return rules;
 }
 
-static bool _has_machine_halted()
+static bool _has_machine_halted(MachineState *machine)
 {
-    return strcmp(global_machine->current_state, HALT_STATE) == 0;
+    return strcmp(machine->current_state, HALT_STATE) == 0;
 }
 
-static void _free_machine()
+static void _free_machine(MachineState *machine)
 {
-    if (global_machine) {
-        free(global_machine->current_state);
-        free(global_machine->next_state);
-        free(global_machine->tape);
-        free(global_machine);
-    }
+    free(machine->current_state);
+    free(machine->next_state);
+    free(machine->tape);
+    free(machine);
 }
 
-static void _move_head(int steps)
+static void _move_head(MachineState *machine, int steps)
 {
-    global_machine->head += steps;
-    if (global_machine->head < 0 || global_machine->head > global_machine->tape_capacity) {
+    machine->head += steps;
+    if (machine->head < 0 || machine->head > machine->tape_capacity) {
         logger->fatal("Error: Tape head out of bounds.\n");
         exit(1);
     }
 }
 
-static void _write_tape(char value)
+static void _write_tape(MachineState *machine, char value)
 {
     if (value != '_') {
-        global_machine->tape[global_machine->head] = value;
+        machine->tape[machine->head] = value;
     }
 }
 
-static void _ensure_tape_size(int new_head_position)
+static void _ensure_tape_size(MachineState *machine, int new_head_position)
 {
-    if (new_head_position >= global_machine->tape_capacity) {
-        int new_capacity = global_machine->tape_capacity * 2;
-        char *new_tape = (char *)realloc(global_machine->tape, new_capacity * sizeof(global_machine->tape));
+    if (new_head_position >= machine->tape_capacity) {
+        int new_capacity = machine->tape_capacity * 2;
+        char *new_tape = (char *)realloc(machine->tape, new_capacity * sizeof(machine->tape));
         if (new_tape == NULL) {
             logger->fatal("Error: Failed to reallocate memory for tape");
             exit(1);
         }
-        memset(new_tape + global_machine->tape_capacity, INITIAL_TAPE_CHAR, new_capacity - global_machine->tape_capacity);
-        global_machine->tape = new_tape;
-        global_machine->tape_capacity = new_capacity;
+        memset(new_tape + machine->tape_capacity, INITIAL_TAPE_CHAR, new_capacity - machine->tape_capacity);
+        machine->tape = new_tape;
+        machine->tape_capacity = new_capacity;
     }
 }
 
-static void _print_state()
+static void _print_state(MachineState *machine)
 {
 #ifdef INCLUDE_PREVIOUS_STATE
     printf("(%s -> )", machine->previous_state);
 #endif
-    printf("%s:", global_machine->current_state);
-    for (int i = 0; i < strlen(global_machine->tape); i++) {
-        printf("%c ", global_machine->tape[i]);
+    printf("%s:", machine->current_state);
+    for (int i = 0; i < strlen(machine->tape); i++) {
+        printf("%c ", machine->tape[i]);
     }
-    if (global_machine->next_state != NULL) {
-        printf(" -> %s", global_machine->next_state);
+    if (machine->next_state != NULL) {
+        printf(" -> %s", machine->next_state);
     }
     printf("\n");
-    int initial_offset = strlen(global_machine->current_state) + 1;
+    int initial_offset = strlen(machine->current_state) + 1;
 #ifdef INCLUDE_PREVIOUS_STATE
     initial_offset += 6 + strlen(machine->next_state);
 #endif
-    for (int i = 0; i < initial_offset + global_machine->head * 2; i++) {
+    for (int i = 0; i < initial_offset + machine->head * 2; i++) {
         printf(" ");
     }
     printf("^\n");
